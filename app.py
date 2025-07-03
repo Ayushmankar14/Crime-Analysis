@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -75,14 +73,15 @@ with tabs[0]:
     filtered_df = df[df['Cluster'].isin(selected_clusters)]
 
     st.subheader("🗺️ Cluster Map of Crime Locations")
-    fig = px.scatter_map(
+    fig = px.scatter_mapbox(
         filtered_df,
         lat="Latitude",
         lon="Longitude",
         color="Cluster",
         color_continuous_scale="Turbo",
         height=600,
-        zoom=10
+        zoom=10,
+        mapbox_style="open-street-map"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -116,14 +115,15 @@ with tabs[0]:
 with tabs[1]:
     st.subheader("📌 Raw Crime Map (2012–2017 Sample)")
     if not raw_df.empty:
-        fig2 = px.scatter_map(
+        fig2 = px.scatter_mapbox(
             raw_df,
             lat="Latitude",
             lon="Longitude",
             color="Primary Type",
             title="Individual Crimes by Type",
             height=600,
-            zoom=10
+            zoom=10,
+            mapbox_style="open-street-map"
         )
         st.plotly_chart(fig2, use_container_width=True)
         st.dataframe(raw_df.head(1000), use_container_width=True)
