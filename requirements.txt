@@ -1,7 +1,8 @@
 streamlit==1.35.0
 pandas==2.2.2
 plotly==5.21.0
-scikit-learn==1.4.0        # ⬅️ Downgraded from 1.4.2
+scipy==1.11.4
+      # ⬅️ Downgraded from 1.4.2
 numpy==1.26.4              # ⬅️ Use stable NumPy
 scipy==1.13.1
 gdown==5.2.0
