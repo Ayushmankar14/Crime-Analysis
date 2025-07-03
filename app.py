@@ -3,12 +3,32 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
+import gdown
 from brain import predict_cluster, kmeans_model, scaler_model
 
 st.set_page_config(page_title="Chicago Crime Clustering", layout="wide")
 st.title("🔍 Chicago Crime Cluster Explorer")
 
-# Load clustered data with memory-safe strategy
+# ----------- 📥 Download files from Google Drive if not present -----------------
+def download_if_missing(file_id, output_path):
+    if not os.path.exists(output_path):
+        st.info(f"📥 Downloading {output_path} ...")
+        gdown.download(f"https://drive.google.com/uc?id={file_id}", output_path, quiet=False)
+
+# Large files hosted externally to avoid GitHub size limits
+download_if_missing("1_aqWE9NJqa2GRj9DNj2YfEohdlMf6p9k", "crime_clustered_output.csv")
+download_if_missing("1uNpuLhzMaqFkJsWNzWf1yucx9RQVfK5L", "crime_kmeans_model.pkl")
+download_if_missing("1DjN_WStn7aUVxErBKuhzg53RJYmzd-NS", "crime_scaler.pkl")
+
+# 4 large crime data files
+download_if_missing("1v8ui1H1zwG9SPztGR3HUAUT7iL-Z4kWX", "Chicago_Crimes_2001_to_2004.csv")
+download_if_missing("12isIDKoEaCSIm0VbCOdZ6c6JOToWjFRh", "Chicago_Crimes_2005_to_2007.csv")
+download_if_missing("1EZqAMiO89IKCYlqry57kLlC6aNeQMSZV", "Chicago_Crimes_2008_to_2011.csv")
+download_if_missing("16HjoQqK0Aop63QVuV5APThCS47MJnB5g", "Chicago_Crimes_2012_to_2017.csv")
+
+# ----------- 📦 Load Data -----------------
+
 @st.cache_data
 def load_data():
     df = pd.read_csv("crime_clustered_output.csv")
@@ -18,7 +38,6 @@ def load_data():
     df['Cluster'] = pd.to_numeric(df['Cluster'], downcast='unsigned')
     return df
 
-# Load raw crime records for individual events
 @st.cache_data
 def load_raw_crimes():
     files = [
@@ -27,7 +46,13 @@ def load_raw_crimes():
         "Chicago_Crimes_2008_to_2011.csv",
         "Chicago_Crimes_2012_to_2017.csv"
     ]
-    dfs = [pd.read_csv(f, usecols=['Primary Type', 'Latitude', 'Longitude', 'Date'], low_memory=False) for f in files]
+    dfs = []
+    for f in files:
+        if os.path.exists(f):
+            df_part = pd.read_csv(f, usecols=['Primary Type', 'Latitude', 'Longitude', 'Date'], low_memory=False)
+            dfs.append(df_part)
+    if not dfs:
+        return pd.DataFrame(columns=['Primary Type', 'Latitude', 'Longitude', 'Date'])
     df = pd.concat(dfs)
     df = df.dropna(subset=['Latitude', 'Longitude', 'Primary Type'])
     df = df[df['Date'].str.contains("2012|2013|2014|2015|2016|2017")]
@@ -36,20 +61,17 @@ def load_raw_crimes():
 df = load_data()
 raw_df = load_raw_crimes()
 
-# Tabs: Cluster Map vs Raw Crime Map
+# ----------- 🗺️ Tabs -----------------
 tabs = st.tabs(["📍 Cluster Map", "📌 Raw Crime Map"])
 
 with tabs[0]:
-    # Sidebar filters
     with st.sidebar:
         st.header("🔧 Filters")
         selected_clusters = st.multiselect("Select Clusters to View", sorted(df['Cluster'].unique()), default=sorted(df['Cluster'].unique()))
         show_data = st.checkbox("Show Sampled Raw Data", value=False)
 
-    # Filter by cluster
     filtered_df = df[df['Cluster'].isin(selected_clusters)]
 
-    # Plot cluster map
     st.subheader("🗺️ Cluster Map of Crime Locations")
     fig = px.scatter_map(
         filtered_df,
@@ -62,7 +84,6 @@ with tabs[0]:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Cluster summary
     st.subheader("📊 Cluster Summary")
     summary = filtered_df.groupby("Cluster").size().reset_index(name="Locations in Cluster")
     st.dataframe(summary, use_container_width=True)
@@ -71,10 +92,8 @@ with tabs[0]:
         st.subheader("🧾 Raw Sampled Data (First 1000 Rows)")
         st.dataframe(filtered_df.head(1000), use_container_width=True)
 
-    # Optional: Predict cluster from user input
     st.subheader("🧮 Predict Cluster for a New Location")
 
-    # Load crime type columns from full dataset (once)
     @st.cache_data
     def load_crime_types():
         full_df = pd.read_csv("crime_clustered_output.csv")
@@ -94,19 +113,22 @@ with tabs[0]:
 
 with tabs[1]:
     st.subheader("📌 Raw Crime Map (2012–2017 Sample)")
-    fig2 = px.scatter_map(
-        raw_df,
-        lat="Latitude",
-        lon="Longitude",
-        color="Primary Type",
-        title="Individual Crimes by Type",
-        height=600,
-        zoom=10
-    )
-    st.plotly_chart(fig2, use_container_width=True)
-    st.dataframe(raw_df.head(1000), use_container_width=True)
+    if not raw_df.empty:
+        fig2 = px.scatter_map(
+            raw_df,
+            lat="Latitude",
+            lon="Longitude",
+            color="Primary Type",
+            title="Individual Crimes by Type",
+            height=600,
+            zoom=10
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+        st.dataframe(raw_df.head(1000), use_container_width=True)
+    else:
+        st.warning("❌ Raw crime CSV files are not available locally. Upload them or host online.")
 
-# Footer
+# ----------- Footer -----------
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: gray;'>"
