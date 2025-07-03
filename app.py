@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import os
 import gdown
-from brain import predict_cluster, kmeans_model, scaler_model
+from brain import predict_cluster, load_model_and_scaler
 
 st.set_page_config(page_title="Chicago Crime Clustering", layout="wide")
 st.title("🔍 Chicago Crime Cluster Explorer")
@@ -27,8 +27,10 @@ download_if_missing("12isIDKoEaCSIm0VbCOdZ6c6JOToWjFRh", "Chicago_Crimes_2005_to
 download_if_missing("1EZqAMiO89IKCYlqry57kLlC6aNeQMSZV", "Chicago_Crimes_2008_to_2011.csv")
 download_if_missing("16HjoQqK0Aop63QVuV5APThCS47MJnB5g", "Chicago_Crimes_2012_to_2017.csv")
 
-# ----------- 📦 Load Data -----------------
+# ----------- ✅ Load Models AFTER Download -----------------
+kmeans_model, scaler_model = load_model_and_scaler()
 
+# ----------- 📦 Load Data -----------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("crime_clustered_output.csv")
