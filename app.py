@@ -59,8 +59,11 @@ def load_raw_crimes():
 df = load_data()
 raw_df = load_raw_crimes()
 
-# ----------- 📦 Load Static Cluster Summary CSV -----------------
-training_summary_df = pd.read_csv("62a7ce2c-be65-4f53-b9e1-a3093e6634c1.csv")
+# ----------- 📦 Load Static Cluster Summary -----------------
+# 🔧 FIXED: Removed external file dependency
+training_summary_df = df.drop(['Latitude', 'Longitude', 'Cluster'], axis=1).sum().reset_index()
+training_summary_df.columns = ['Crime Type', 'Count']
+training_summary_df = training_summary_df.sort_values(by='Count', ascending=False)
 
 # ----------- 🗺️ Tabs -----------------
 tabs = st.tabs(["📍 Cluster Map", "📌 Raw Crime Map"])
@@ -90,7 +93,7 @@ with tabs[0]:
     summary = filtered_df.groupby("Cluster").size().reset_index(name="Locations in Cluster")
     st.dataframe(summary, use_container_width=True)
 
-    st.subheader("📦 Training Cluster Distribution (Static)")
+    st.subheader("📦 Training Cluster Distribution (Dynamic)")
     st.dataframe(training_summary_df, use_container_width=True)
 
     if show_data:
@@ -116,7 +119,7 @@ with tabs[0]:
         cluster = predict_cluster(input_df, kmeans_model, scaler_model)
         st.success(f"📌 This location belongs to **Cluster {cluster[0]}**")
 
-        # Show user input crime-type breakdown
+        # Show user input breakdown
         st.subheader("🧾 Your Input Crime Distribution")
         transposed = input_df.T.reset_index()
         transposed.columns = ["Crime Type", "Count"]
