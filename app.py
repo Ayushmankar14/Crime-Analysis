@@ -14,12 +14,10 @@ def download_if_missing(file_id, output_path):
         st.info(f"📥 Downloading {output_path} ...")
         gdown.download(f"https://drive.google.com/uc?id={file_id}", output_path, quiet=False)
 
-# Large files hosted externally to avoid GitHub size limits
+# Required files
 download_if_missing("1_aqWE9NJqa2GRj9DNj2YfEohdlMf6p9k", "crime_clustered_output.csv")
 download_if_missing("1uNpuLhzMaqFkJsWNzWf1yucx9RQVfK5L", "crime_kmeans_model.pkl")
 download_if_missing("1DjN_WStn7aUVxErBKuhzg53RJYmzd-NS", "crime_scaler.pkl")
-
-# 4 large crime data files
 download_if_missing("1v8ui1H1zwG9SPztGR3HUAUT7iL-Z4kWX", "Chicago_Crimes_2001_to_2004.csv")
 download_if_missing("12isIDKoEaCSIm0VbCOdZ6c6JOToWjFRh", "Chicago_Crimes_2005_to_2007.csv")
 download_if_missing("1EZqAMiO89IKCYlqry57kLlC6aNeQMSZV", "Chicago_Crimes_2008_to_2011.csv")
@@ -61,6 +59,9 @@ def load_raw_crimes():
 df = load_data()
 raw_df = load_raw_crimes()
 
+# ----------- 📦 Load Static Cluster Summary CSV -----------------
+training_summary_df = pd.read_csv("62a7ce2c-be65-4f53-b9e1-a3093e6634c1.csv")
+
 # ----------- 🗺️ Tabs -----------------
 tabs = st.tabs(["📍 Cluster Map", "📌 Raw Crime Map"])
 
@@ -89,6 +90,9 @@ with tabs[0]:
     summary = filtered_df.groupby("Cluster").size().reset_index(name="Locations in Cluster")
     st.dataframe(summary, use_container_width=True)
 
+    st.subheader("📦 Training Cluster Distribution (Static)")
+    st.dataframe(training_summary_df, use_container_width=True)
+
     if show_data:
         st.subheader("🧾 Raw Sampled Data (First 1000 Rows)")
         st.dataframe(filtered_df.head(1000), use_container_width=True)
@@ -111,6 +115,17 @@ with tabs[0]:
         input_df = pd.DataFrame([{col: user_input.get(col, 0) for col in crime_types}])
         cluster = predict_cluster(input_df, kmeans_model, scaler_model)
         st.success(f"📌 This location belongs to **Cluster {cluster[0]}**")
+
+        # Show user input crime-type breakdown
+        st.subheader("🧾 Your Input Crime Distribution")
+        transposed = input_df.T.reset_index()
+        transposed.columns = ["Crime Type", "Count"]
+        transposed = transposed[transposed["Count"] > 0].sort_values(by="Count", ascending=False)
+
+        if transposed.empty:
+            st.info("You entered 0 for all crime types.")
+        else:
+            st.dataframe(transposed, use_container_width=True)
 
 with tabs[1]:
     st.subheader("📌 Raw Crime Map (2012–2017 Sample)")
